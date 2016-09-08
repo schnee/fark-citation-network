@@ -5,13 +5,13 @@ library(dplyr)
 
 #theUrl <- "http://www.fark.com/comments/9284915?cpp=1"
 
-theUrl <-"http://www.fark.com/comments/9284533?cpp=1"
+#theUrl <-"http://www.fark.com/comments/9284533?cpp=1"
 
 # this one has a double quote near the end - dig into this
 # commentTable[[100]]
-#theUrl <- "http://www.fark.com/comments/9286319?cpp=1"
+theUrl <- "http://www.fark.com/comments/9286319?cpp=1"
 
-#theUrl <- "http://www.fark.com/comments/9286230?cpp=1"
+theUrl <- "http://www.fark.com/comments/9286230?cpp=1"
 
 potato <- read_html(theUrl)
 
@@ -37,7 +37,7 @@ extractLinkingFromNode <- function(quotedNode, commentAuthor, commentId) {
       html_text(),
     
     #who quoted
-    quotor = commentAuthor
+    author = commentAuthor
   )
 }
 
@@ -74,28 +74,26 @@ makeLink <- function(ctab) {
     #     html_text(),
     # 
     #   #who quoted
-    #   quotor = commentAuthor
+    #   author = commentAuthor
     # )
   } else {
     list(
       #here we're creating a loopback to the comment. this is a bit
       #of hack
-      quotedComment=ctab %>% 
-        html_attr("id") %>% 
-        sub("ctable", "c", .),
+      quotedComment=commentId,
       #comment id
       comment = commentId,
       #who was quoted
-      quotedAuthor = NA,
+      quotedAuthor = commentAuthor,
       #who quoted
-      quotor = commentAuthor
+      author = commentAuthor
     )
   } 
 }
 
 links = lapply(commentTables, makeLink)
 df <- data.frame(matrix(unlist(links), ncol=4, byrow=T))
-colnames(df) <- c("quotedComment", "comment", "quotedAuthor", "quotor")
+colnames(df) <- c("quotedComment", "comment", "quotedAuthor", "author")
 #df <- bind_rows(links)
 
 library(igraph)
@@ -104,12 +102,14 @@ library(scales)
 # reverse the order so that the direction is from the quoting to the quoted
 # simplify will remove the looping edges that we inserted in the 
 # hack in makeLinks
-network <- simplify(graph_from_data_frame(df[2:1]))
+authorNetwork <- simplify(graph_from_data_frame(df[4:3]))
+commentNetwork <- simplify(graph_from_data_frame(df[2:1]))
 
+network <- authorNetwork
 cl <- clusters(network)
 pr <- page.rank(network)$vector
 
-vertex_attr(network, "label") <- df$quotor
+#vertex_attr(network, "label") <- df$author
 
 plot(network, 
      vertex.color=cl$membership+1L,
