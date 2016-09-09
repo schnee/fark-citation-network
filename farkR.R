@@ -13,6 +13,8 @@ theUrl <- "http://www.fark.com/comments/9286319?cpp=1"
 
 theUrl <- "http://www.fark.com/comments/9286230?cpp=1"
 
+theUrl <- paste("http://www.fark.com/comments/9288789/Bondi-is-Trumps-Benghazi", "?cpp=1", sep="")
+
 potato <- read_html(theUrl)
 
 
@@ -55,66 +57,68 @@ makeLink <- function(ctab) {
     html_nodes(".quotedcomment")
   
   if(length(quotedNodes) > 0) {
+    # this comment contains quotes
     
     lapply(quotedNodes, extractLinkingFromNode, commentAuthor, commentId)
-    # 
-    # list(
-    #   #the path to the comment that was quoted
-    #   quotedComment=quotedNodes %>%
-    #     html_nodes(xpath="strong/a") %>%
-    #     html_attr("href") %>%
-    #     sub("http.*#","",., perl=TRUE ),
-    # 
-    #   #comment id
-    #   comment = commentId,
-    # 
-    #   #who was quoted
-    #   quotedAuthor = quotedNodes %>%
-    #     html_nodes(xpath="strong/a") %>%
-    #     html_text(),
-    # 
-    #   #who quoted
-    #   author = commentAuthor
-    # )
+
   } else {
     list(
-      #here we're creating a loopback to the comment. this is a bit
-      #of hack
+      # this comment does not contain quotes
+      
+      # here we're creating a loopback to the comment. this is a bit of hack,
+      # but it does allow for us put the solitary nodes in the network.
       quotedComment=commentId,
-      #comment id
       comment = commentId,
-      #who was quoted
       quotedAuthor = commentAuthor,
-      #who quoted
       author = commentAuthor
     )
   } 
 }
 
 links = lapply(commentTables, makeLink)
-df <- data.frame(matrix(unlist(links), ncol=4, byrow=T))
+df <- data.frame(matrix(unlist(links), ncol=4, byrow=T), stringsAsFactors=F)
 colnames(df) <- c("quotedComment", "comment", "quotedAuthor", "author")
-#df <- bind_rows(links)
+
 
 library(igraph)
 library(scales)
 
-# reverse the order so that the direction is from the quoting to the quoted
+# ensure that the order of columns is such that the direction is from the
+# quoting to the quoted - this helps with PageRank
+
 # simplify will remove the looping edges that we inserted in the 
 # hack in makeLinks
 authorNetwork <- simplify(graph_from_data_frame(df[4:3]))
 commentNetwork <- simplify(graph_from_data_frame(df[2:1]))
 
-network <- authorNetwork
-cl <- clusters(network)
-pr <- page.rank(network)$vector
+commentNetwork <- set_vertex_attr(commentNetwork, name = "author", 
+                                  index = df$comment, value = as.vector(df$author))
 
-#vertex_attr(network, "label") <- df$author
+network <- commentNetwork
+cl <- clusters(commentNetwork)
+pr <- page.rank(commentNetwork)$vector
 
-plot(network, 
+pageRanks <- data.frame(comment=names(pr), pageRank = pr, stringsAsFactors = F)
+
+df <- df %>% left_join(pageRanks)
+
+#identify the topPct's of the page ranks...
+topPct <- 0.1
+df$rank <- cut(df$pageRank, 
+               breaks = quantile(df$pageRank, 
+                                 probs = c(0,1-(topPct/100),1)), 
+               labels = c(0,topPct),
+               include.lowest = T)
+
+top25 <- df %>% filter(rank == topPct )
+
+commentNetwork <- set_vertex_attr(commentNetwork, name = "topAuthor",
+                                  index = top25$comment, value = top25$author)
+
+plot(commentNetwork, 
      vertex.color=cl$membership+1L,
      edge.arrow.size=.2,
-     vertex.label=NA, #V(network)$label,
+     vertex.label=V(commentNetwork)$topAuthor,
      vertex.label.cex=0.9,
      vertex.size=rescale(pr, to=c(2,10)),
      edge.arrow.width=0.5)
@@ -125,7 +129,7 @@ lsg <- dg[[which.max(sapply(dg,vcount))]]
 
 plot(lsg, 
      edge.arrow.size=.2,
-     vertex.label=V(lsg)$label,
+     vertex.label=V(lsg)$author,
      vertex.label.cex=0.9,
      vertex.size=2,
      edge.arrow.width=0.5)
