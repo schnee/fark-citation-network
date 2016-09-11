@@ -15,6 +15,12 @@ library(dplyr)
 
 theUrl <- paste("http://www.fark.com/comments/9288789/Bondi-is-Trumps-Benghazi", "?cpp=1", sep="")
 
+theUrl <- paste("http://www.fark.com/comments/9290006/Trump-claims-Clinton-could-shoot-someone-not-get-prosecuted-which-is-basically-what-he-said-about-himself-six-months-ago", "?cpp=1", sep="")
+
+theUrl <- paste("http://www.fark.com/comments/9290296", "?cpp=1", sep="")
+
+theUrl <- paste("http://www.fark.com/comments/9290998/Trump-campaign-We-demand-an-apology-from-Hillary-for-saying-half-of-our-supporters-are-racist-Hillary-Fine-Im-sorry-I-shouldnt-have-said-half-drops-mic", "?cpp=1", sep="")
+
 # Because most of these threads wind up counting to 'potato'
 potato <- read_html(theUrl)
 
@@ -94,29 +100,20 @@ commentNetwork <- simplify(graph_from_data_frame(df[2:1]))
 commentNetwork <- set_vertex_attr(commentNetwork, name = "author", 
                                   index = df$comment, value = as.vector(df$author))
 
-network <- authorNetwork
+network <- commentNetwork
 cl <- clusters(network)
 pr <- page.rank(network)$vector
 
 # if the page ranks are over the comment network, the dataframe should have "comment"
-pageRanks <- data.frame(author=names(pr), pageRank = pr, stringsAsFactors = F)
+pageRanks <- data.frame(comment=names(pr), pageRank = pr, stringsAsFactors = F)
 
 df <- df %>% left_join(pageRanks)
 
-#identify the topPct's of the page ranks...
-topPct <- 25
-df$rank <- cut(df$pageRank, 
-               breaks = quantile(df$pageRank, 
-                                 probs = c(0,1-(topPct/100),1),
-                                 na.rm = T), 
-               labels = c(0,topPct),
-               include.lowest = T)
-
-top25 <- df %>% filter(rank == topPct )
+topN <- df %>% top_n(0.05 * nrow(df), pageRank)
 
 # if the network is the comment network, the index should be top25$comment
 network <- set_vertex_attr(network, name = "topAuthor",
-                                  index = top25$author, value = top25$author)
+                                  index = topN$comment, value = topN$author)
 
 mainTitle = paste(strtrim(potato %>% html_nodes("head title") %>% html_text(),
                       width = 60), "...", sep="")
@@ -129,7 +126,7 @@ plot(network,
      vertex.size=rescale(pr, to=c(2,10)),
      edge.arrow.width=0.5)
 title(main = mainTitle,
-      sub = "Author Network (sized by page rank)")
+      sub = "Comment Network (sized by page rank)")
 
 
 dg <- decompose.graph(network)
