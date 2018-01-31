@@ -109,7 +109,7 @@ pageRanks <- data.frame(comment=names(pr), pageRank = pr, stringsAsFactors = F)
 
 df <- df %>% left_join(pageRanks)
 
-topN <- df %>% top_n(0.05 * nrow(df), pageRank)
+topN <- df %>% top_n(round(0.05 * nrow(df)), pageRank)
 
 # if the network is the comment network, the index should be top25$comment
 network <- set_vertex_attr(network, name = "topAuthor",
