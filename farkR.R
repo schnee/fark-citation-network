@@ -17,9 +17,11 @@ theUrl <- paste("http://www.fark.com/comments/9288789/Bondi-is-Trumps-Benghazi",
 
 theUrl <- paste("http://www.fark.com/comments/9290006/Trump-claims-Clinton-could-shoot-someone-not-get-prosecuted-which-is-basically-what-he-said-about-himself-six-months-ago", "?cpp=1", sep="")
 
-theUrl <- paste("http://www.fark.com/comments/9290296", "?cpp=1", sep="")
+theId <- 12319467
 
-theUrl <- paste("http://www.fark.com/comments/9290998/Trump-campaign-We-demand-an-apology-from-Hillary-for-saying-half-of-our-supporters-are-racist-Hillary-Fine-Im-sorry-I-shouldnt-have-said-half-drops-mic", "?cpp=1", sep="")
+theUrl <- paste("http://www.fark.com/comments/", theId, "?cpp=1", sep="")
+
+#theUrl <- paste("http://www.fark.com/comments/9290998/Trump-campaign-We-demand-an-apology-from-Hillary-for-saying-half-of-our-supporters-are-racist-Hillary-Fine-Im-sorry-I-shouldnt-have-said-half-drops-mic", "?cpp=1", sep="")
 
 # Because most of these threads wind up counting to 'potato'
 potato <- read_html(theUrl)
@@ -139,3 +141,4 @@ plot(lsg,
      vertex.label.cex=0.9,
      vertex.size=rescale(pr, to=c(2,10)),
      edge.arrow.width=0.5)
+
